@@ -1,26 +1,19 @@
-
-import 'dotenv/config';
-import express from 'express';
-import cors from 'cors';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3004;
 
-// Se o Electron passou um caminho customizado (AppData), usa ele. 
-// Caso contrário (desenvolvimento), usa a raiz do projeto.
+// Caminho do banco de dados (prioriza o que o Electron enviar via variável de ambiente)
 const DB_PATH = process.env.DB_CUSTOM_PATH || path.join(__dirname, 'db.json');
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
-// --- LOGICA DE BANCO DE DADOS JSON ---
-
+// Inicialização do Banco de Dados
 const initDB = () => {
   const dbDir = path.dirname(DB_PATH);
   if (!fs.existsSync(dbDir)) {
@@ -64,8 +57,7 @@ const getTodayLocal = () => {
   return localDate.toISOString().split('T')[0];
 };
 
-// --- API ROUTES ---
-
+// Rotas da API
 app.get('/api/modelistas', (req, res) => {
   const db = readDB();
   res.json(db.modelistas);
