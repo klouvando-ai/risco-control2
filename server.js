@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3004;
 const DB_PATH = process.env.DB_CUSTOM_PATH || path.join(__dirname, 'db.json');
 
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' })); // Aumentado limite para backups grandes
 
 // Inicialização do Banco de Dados
 const initDB = () => {
@@ -104,6 +104,20 @@ app.post('/api/referencias/:id/pagar', (req, res) => {
     writeDB(db);
     res.json({ success: true });
   } else res.status(404).json({ error: "Não encontrado" });
+});
+
+// NOVO: Endpoint de Restauração
+app.post('/api/restore', (req, res) => {
+  const backupData = req.body;
+  if (backupData && Array.isArray(backupData.modelistas) && Array.isArray(backupData.referencias)) {
+    writeDB({
+      modelistas: backupData.modelistas,
+      referencias: backupData.referencias
+    });
+    res.json({ success: true });
+  } else {
+    res.status(400).json({ error: "Arquivo de backup inválido ou corrompido." });
+  }
 });
 
 // Arquivos Estáticos (Frontend)

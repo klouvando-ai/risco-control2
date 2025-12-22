@@ -1,9 +1,7 @@
-
 import { Modelista, Referencia, RiscoStatus, ReportData } from '../types';
 
 const API_BASE = '/api';
 
-// Função auxiliar para pegar data local formato YYYY-MM-DD
 const getTodayLocal = () => {
   const date = new Date();
   const offset = date.getTimezoneOffset();
@@ -157,5 +155,31 @@ export const dataService = {
       totalRiscos: filtered.length,
       totalMetros: filtered.reduce((acc, curr) => acc + (Number(curr.comprimentoFinal) || 0), 0)
     };
+  },
+
+  exportBackup: async () => {
+    const mods = await dataService.getModelistas();
+    const refs = await dataService.getReferencias();
+    const data = { modelistas: mods, referencias: refs, exportDate: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup_kavins_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+
+  restoreBackup: async (jsonData: any) => {
+    const response = await fetch(`${API_BASE}/restore`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(jsonData)
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Falha ao restaurar dados' }));
+      throw new Error(error.error || 'Erro na restauração');
+    }
+    return response.json();
   }
 };
