@@ -1,5 +1,5 @@
 {
-  "name": "copy-of-kavin's-risco-control-2",
+  "name": "kavin's-risco-control-desktop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -17,14 +17,13 @@
     "jspdf": "2.5.1",
     "jspdf-autotable": "3.8.2",
     "dotenv": "^17.2.3",
-    "express": "^5.2.1",
-    "mysql2": "^3.16.0",
     "cors": "^2.8.5",
-    "path": "^0.12.7",
-    "fs": "^0.0.1-security",
     "url": "^0.11.4",
-    "vite": "^7.3.0",
-    "@vitejs/plugin-react": "^5.1.2"
+    "fs": "^0.0.1-security",
+    "path": "^0.12.7",
+    "express": "^5.2.1",
+    "@vitejs/plugin-react": "^5.1.2",
+    "vite": "^7.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
