@@ -1,4 +1,3 @@
-
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -7,7 +6,6 @@ const fs = require('fs');
 let mainWindow;
 let serverProcess;
 
-// Define onde o banco de dados ficará (Pasta AppData do usuário)
 const userDataPath = app.getPath('userData');
 const dbPath = path.join(userDataPath, 'db.json');
 
@@ -23,8 +21,12 @@ function createWindow() {
     autoHideMenuBar: true
   });
 
-  // Carrega o servidor local
-  mainWindow.loadURL('http://localhost:3004');
+  // Tenta carregar. Se falhar, tenta de novo em 2 segundos
+  mainWindow.loadURL('http://localhost:3004').catch(() => {
+    setTimeout(() => {
+      if (mainWindow) mainWindow.loadURL('http://localhost:3004');
+    }, 2000);
+  });
 
   mainWindow.on('closed', function () {
     mainWindow = null;
@@ -32,13 +34,15 @@ function createWindow() {
 }
 
 function startServer() {
-  // Passamos o caminho do banco via variável de ambiente para o servidor
-  serverProcess = spawn('node', [path.join(__dirname, 'server.js')], {
+  const serverPath = path.join(__dirname, 'server.js');
+  
+  serverProcess = spawn('node', [serverPath], {
     shell: true,
     env: { 
       ...process.env, 
       PORT: 3004,
-      DB_CUSTOM_PATH: dbPath // Caminho seguro para gravação
+      DB_CUSTOM_PATH: dbPath,
+      NODE_ENV: 'production'
     }
   });
 
@@ -53,7 +57,8 @@ function startServer() {
 
 app.on('ready', () => {
   startServer();
-  setTimeout(createWindow, 1500);
+  // Espera o servidor subir antes de criar a janela
+  setTimeout(createWindow, 2500);
 });
 
 app.on('window-all-closed', function () {

@@ -6,20 +6,26 @@
   "type": "commonjs",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder"
+    "build": "vite build",
+    "dist": "npm run build && electron-builder"
   },
   "keywords": [],
   "author": "Kavin's",
   "license": "ISC",
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.1",
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.4"
   },
   "dependencies": {
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "lucide-react": "^0.344.0"
+    "lucide-react": "^0.344.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "build": {
     "appId": "com.kavins.riscocontrol",
@@ -36,7 +42,6 @@
     ],
     "win": {
       "target": [
-        "portable",
         "nsis"
       ],
       "icon": "icon.ico"

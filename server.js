@@ -6,8 +6,6 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3004;
-
-// Caminho do banco de dados (prioriza o que o Electron enviar via variável de ambiente)
 const DB_PATH = process.env.DB_CUSTOM_PATH || path.join(__dirname, 'db.json');
 
 app.use(cors());
@@ -19,14 +17,9 @@ const initDB = () => {
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }
-
   if (!fs.existsSync(DB_PATH)) {
-    const initialData = {
-      modelistas: [],
-      referencias: []
-    };
+    const initialData = { modelistas: [], referencias: [] };
     fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
-    console.log(`📦 Banco de dados inicializado em: ${DB_PATH}`);
   }
 };
 
@@ -35,7 +28,6 @@ const readDB = () => {
     const data = fs.readFileSync(DB_PATH, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
-    console.error("Erro ao ler banco:", err);
     return { modelistas: [], referencias: [] };
   }
 };
@@ -43,9 +35,7 @@ const readDB = () => {
 const writeDB = (data) => {
   try {
     fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error("Erro ao salvar dados:", err);
-  }
+  } catch (err) {}
 };
 
 initDB();
@@ -57,12 +47,8 @@ const getTodayLocal = () => {
   return localDate.toISOString().split('T')[0];
 };
 
-// Rotas da API
-app.get('/api/modelistas', (req, res) => {
-  const db = readDB();
-  res.json(db.modelistas);
-});
-
+// API
+app.get('/api/modelistas', (req, res) => res.json(readDB().modelistas));
 app.post('/api/modelistas', (req, res) => {
   const db = readDB();
   const modelista = req.body;
@@ -72,20 +58,16 @@ app.post('/api/modelistas', (req, res) => {
   writeDB(db);
   res.json({ success: true });
 });
-
 app.delete('/api/modelistas/:id', (req, res) => {
   const db = readDB();
   db.modelistas = db.modelistas.filter(m => m.id !== req.params.id);
   writeDB(db);
   res.json({ success: true });
 });
-
 app.get('/api/referencias', (req, res) => {
   const db = readDB();
-  const sorted = [...db.referencias].sort((a, b) => b.dataPedido.localeCompare(a.dataPedido));
-  res.json(sorted);
+  res.json([...db.referencias].sort((a, b) => b.dataPedido.localeCompare(a.dataPedido)));
 });
-
 app.post('/api/referencias', (req, res) => {
   const db = readDB();
   const ref = req.body;
@@ -96,7 +78,6 @@ app.post('/api/referencias', (req, res) => {
   writeDB(db);
   res.json({ success: true });
 });
-
 app.post('/api/referencias/:id/receber', (req, res) => {
   const db = readDB();
   const { comprimentoFinal, dataRecebimento, valorTotal, observacoes } = req.body;
@@ -112,32 +93,30 @@ app.post('/api/referencias/:id/receber', (req, res) => {
     };
     writeDB(db);
     res.json({ success: true });
-  } else {
-    res.status(404).json({ error: "Não encontrado" });
-  }
+  } else res.status(404).json({ error: "Não encontrado" });
 });
-
 app.post('/api/referencias/:id/pagar', (req, res) => {
   const db = readDB();
-  const { dataPagamento } = req.body;
   const index = db.referencias.findIndex(r => r.id === req.params.id);
   if (index !== -1) {
     db.referencias[index].status = "Pago";
-    db.referencias[index].dataPagamento = dataPagamento || getTodayLocal();
+    db.referencias[index].dataPagamento = req.body.dataPagamento || getTodayLocal();
     writeDB(db);
     res.json({ success: true });
-  } else {
-    res.status(404).json({ error: "Não encontrado" });
-  }
+  } else res.status(404).json({ error: "Não encontrado" });
 });
 
+// Arquivos Estáticos (Frontend)
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
-app.use((req, res) => {
+app.get('*', (req, res) => {
   const indexFile = path.join(distPath, 'index.html');
-  if (fs.existsSync(indexFile)) res.sendFile(indexFile);
-  else res.status(404).send('Frontend não encontrado.');
+  if (fs.existsSync(indexFile)) {
+    res.sendFile(indexFile);
+  } else {
+    res.status(404).send('O sistema ainda não foi compilado. Execute o build.');
+  }
 });
 
 app.listen(PORT, '127.0.0.1', () => {
