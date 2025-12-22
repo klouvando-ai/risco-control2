@@ -47,7 +47,7 @@ const getTodayLocal = () => {
   return localDate.toISOString().split('T')[0];
 };
 
-// API
+// API Endpoints
 app.get('/api/modelistas', (req, res) => res.json(readDB().modelistas));
 app.post('/api/modelistas', (req, res) => {
   const db = readDB();
@@ -110,12 +110,13 @@ app.post('/api/referencias/:id/pagar', (req, res) => {
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
+// Fallback para qualquer rota carregar o index.html (SPA)
 app.get('*', (req, res) => {
   const indexFile = path.join(distPath, 'index.html');
   if (fs.existsSync(indexFile)) {
     res.sendFile(indexFile);
   } else {
-    res.status(404).send('O sistema ainda não foi compilado. Execute o build.');
+    res.status(404).send('Pasta "dist" não encontrada. Certifique-se de rodar "npm run build".');
   }
 });
 

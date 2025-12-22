@@ -21,12 +21,16 @@ function createWindow() {
     autoHideMenuBar: true
   });
 
-  // Tenta carregar. Se falhar, tenta de novo em 2 segundos
-  mainWindow.loadURL('http://localhost:3004').catch(() => {
-    setTimeout(() => {
-      if (mainWindow) mainWindow.loadURL('http://localhost:3004');
-    }, 2000);
-  });
+  const url = 'http://localhost:3004';
+  
+  const loadWithRetry = () => {
+    mainWindow.loadURL(url).catch(() => {
+      console.log('Servidor ainda não respondeu, tentando novamente em 1s...');
+      setTimeout(loadWithRetry, 1000);
+    });
+  };
+
+  loadWithRetry();
 
   mainWindow.on('closed', function () {
     mainWindow = null;
@@ -34,6 +38,7 @@ function createWindow() {
 }
 
 function startServer() {
+  // Em produção (app instalado), o caminho pode mudar dependendo de como o electron-builder empacota
   const serverPath = path.join(__dirname, 'server.js');
   
   serverProcess = spawn('node', [serverPath], {
@@ -47,18 +52,18 @@ function startServer() {
   });
 
   serverProcess.stdout.on('data', (data) => {
-    console.log(`Server: ${data}`);
+    console.log(`[Server]: ${data}`);
   });
 
   serverProcess.stderr.on('data', (data) => {
-    console.error(`Server Error: ${data}`);
+    console.error(`[Server Error]: ${data}`);
   });
 }
 
 app.on('ready', () => {
   startServer();
-  // Espera o servidor subir antes de criar a janela
-  setTimeout(createWindow, 2500);
+  // Aguarda um pouco antes de criar a janela para o Express iniciar
+  setTimeout(createWindow, 1500);
 });
 
 app.on('window-all-closed', function () {
