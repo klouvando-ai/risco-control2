@@ -1,7 +1,7 @@
 {
   "name": "Kavin's Risco Control Desktop",
   "description": "Sistema de Controle de Risco - Versão Executável Offline com armazenamento JSON local.",
-  "version": "1.0.1",
-  "main": "main.js",
+  "version": "1.0.2",
+  "main": "index.js",
   "requestFramePermissions": []
 }

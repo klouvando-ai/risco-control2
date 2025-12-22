@@ -1,3 +1,4 @@
+
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
@@ -10,7 +11,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3004;
-const DB_PATH = path.join(__dirname, 'db.json');
+
+// Se o Electron passou um caminho customizado (AppData), usa ele. 
+// Caso contrário (desenvolvimento), usa a raiz do projeto.
+const DB_PATH = process.env.DB_CUSTOM_PATH || path.join(__dirname, 'db.json');
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -18,13 +22,18 @@ app.use(express.json({ limit: '10mb' }));
 // --- LOGICA DE BANCO DE DADOS JSON ---
 
 const initDB = () => {
+  const dbDir = path.dirname(DB_PATH);
+  if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+  }
+
   if (!fs.existsSync(DB_PATH)) {
     const initialData = {
       modelistas: [],
       referencias: []
     };
     fs.writeFileSync(DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
-    console.log('📦 Banco de dados JSON inicializado.');
+    console.log(`📦 Banco de dados inicializado em: ${DB_PATH}`);
   }
 };
 
@@ -33,6 +42,7 @@ const readDB = () => {
     const data = fs.readFileSync(DB_PATH, 'utf-8');
     return JSON.parse(data);
   } catch (err) {
+    console.error("Erro ao ler banco:", err);
     return { modelistas: [], referencias: [] };
   }
 };
@@ -135,7 +145,7 @@ app.use(express.static(distPath));
 app.use((req, res) => {
   const indexFile = path.join(distPath, 'index.html');
   if (fs.existsSync(indexFile)) res.sendFile(indexFile);
-  else res.status(404).send('Execute npm run build primeiro.');
+  else res.status(404).send('Frontend não encontrado.');
 });
 
 app.listen(PORT, '127.0.0.1', () => {
