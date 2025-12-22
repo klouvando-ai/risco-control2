@@ -159,14 +159,21 @@ const Relatorios: React.FC = () => {
     reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
-        const jsonData = JSON.parse(content);
+        let jsonData;
+        
+        try {
+          jsonData = JSON.parse(content);
+        } catch (parseErr) {
+          throw new Error("O arquivo selecionado não é um JSON válido.");
+        }
         
         setLoading(true);
         await dataService.restoreBackup(jsonData);
-        alert("Backup restaurado com sucesso!");
+        alert("Backup restaurado com sucesso! O sistema será atualizado.");
         await loadData();
       } catch (err: any) {
-        alert("Erro ao processar arquivo: " + err.message);
+        console.error("Erro na restauração:", err);
+        alert("FALHA NA RESTAURAÇÃO: " + (err.message || "Erro desconhecido. Verifique se o arquivo está correto."));
       } finally {
         setLoading(false);
         if (fileInputRef.current) fileInputRef.current.value = '';

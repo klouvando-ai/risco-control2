@@ -171,15 +171,23 @@ export const dataService = {
   },
 
   restoreBackup: async (jsonData: any) => {
-    const response = await fetch(`${API_BASE}/restore`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(jsonData)
-    });
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Falha ao restaurar dados' }));
-      throw new Error(error.error || 'Erro na restauração');
+    try {
+      const response = await fetch(`${API_BASE}/restore`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jsonData)
+      });
+      
+      if (!response.ok) {
+        // Tenta ler a mensagem de erro detalhada do servidor
+        const errorData = await response.json().catch(() => ({ error: 'O servidor não enviou uma resposta válida.' }));
+        throw new Error(errorData.error || `Erro do servidor: ${response.status}`);
+      }
+      
+      return response.json();
+    } catch (err: any) {
+      console.error("Erro na chamada de restauração:", err);
+      throw err;
     }
-    return response.json();
   }
 };
