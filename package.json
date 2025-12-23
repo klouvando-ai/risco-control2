@@ -50,6 +50,13 @@
       ],
       "icon": "icon.ico"
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Kavins Risco Control"
+    },
     "asar": true
   }
 }

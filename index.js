@@ -6,14 +6,26 @@ const fs = require('fs');
 let mainWindow;
 let serverProcess;
 
-const userDataPath = app.getPath('userData');
-const dbPath = path.join(userDataPath, 'db.json');
+// Define a pasta de dados diretamente no C: para facilitar a localização pelo usuário
+const dataFolder = 'C:\\KavinsRiscoControl';
+const dbPath = path.join(dataFolder, 'db.json');
+
+// Garante que a pasta no C: existe antes de iniciar o servidor
+if (!fs.existsSync(dataFolder)) {
+  try {
+    fs.mkdirSync(dataFolder, { recursive: true });
+    console.log(`Pasta criada em: ${dataFolder}`);
+  } catch (err) {
+    console.error("Erro ao criar pasta no C:. Usando pasta padrão do sistema.", err);
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     title: "Kavin's Risco Control",
+    icon: path.join(__dirname, 'dist', 'favicon.ico'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true
@@ -25,7 +37,7 @@ function createWindow() {
   
   const loadWithRetry = () => {
     mainWindow.loadURL(url).catch(() => {
-      console.log('Servidor ainda não respondeu, tentando novamente em 1s...');
+      console.log('Aguardando servidor...');
       setTimeout(loadWithRetry, 1000);
     });
   };
@@ -38,7 +50,6 @@ function createWindow() {
 }
 
 function startServer() {
-  // Em produção (app instalado), o caminho pode mudar dependendo de como o electron-builder empacota
   const serverPath = path.join(__dirname, 'server.js');
   
   serverProcess = spawn('node', [serverPath], {
@@ -62,7 +73,6 @@ function startServer() {
 
 app.on('ready', () => {
   startServer();
-  // Aguarda um pouco antes de criar a janela para o Express iniciar
   setTimeout(createWindow, 1500);
 });
 
