@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { dataService } from '../services/dataService';
 import { Modelista, Referencia, RiscoStatus } from '../types';
 import { 
+  BarChart3, 
+  TrendingUp, 
+  Layers, 
   Printer,
   Calendar,
   Filter,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Download
+  Download,
+  Upload
 } from 'lucide-react';
 
 import { jsPDF } from "jspdf";
@@ -18,6 +22,7 @@ const Relatorios: React.FC = () => {
   const [refs, setRefs] = useState<Referencia[]>([]);
   const [modelistas, setModelistas] = useState<Modelista[]>([]);
   const [loading, setLoading] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
@@ -113,12 +118,22 @@ const Relatorios: React.FC = () => {
         ]],
         footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'right' }
       });
+      const finalY = (doc as any).lastAutoTable.finalY || 100;
+      doc.setFontSize(11);
+      doc.setTextColor(30, 41, 59);
+      doc.text("Resumo Financeiro", 14, finalY + 15);
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Total Pago: R$ ${totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14, finalY + 22);
+      doc.text(`Total A Pagar: R$ ${totalAPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14, finalY + 27);
+      doc.text(`Metragem Total: ${reportRefs.reduce((a,c) => a + (Number(c.comprimentoFinal) || 0), 0).toFixed(2)}m`, 14, finalY + 32);
+      doc.autoPrint();
       const blob = doc.output('blob');
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
-      alert("Erro ao gerar impressão.");
+      alert("Ocorreu um erro ao gerar a prévia de impressão.");
     }
   };
 
@@ -130,25 +145,77 @@ const Relatorios: React.FC = () => {
     }
   };
 
+  const handleRestoreClick = () => {
+    if (confirm("ATENÇÃO: Restaurar um backup irá APAGAR todos os dados atuais e substituí-los pelo arquivo selecionado. Deseja continuar?")) {
+      fileInputRef.current?.click();
+    }
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const content = e.target?.result as string;
+        let jsonData;
+        
+        try {
+          jsonData = JSON.parse(content);
+        } catch (parseErr) {
+          throw new Error("O arquivo selecionado não é um JSON válido.");
+        }
+        
+        setLoading(true);
+        await dataService.restoreBackup(jsonData);
+        alert("Backup restaurado com sucesso! O sistema será atualizado.");
+        await loadData();
+      } catch (err: any) {
+        console.error("Erro na restauração:", err);
+        alert("FALHA NA RESTAURAÇÃO: " + (err.message || "Erro desconhecido. Verifique se o arquivo está correto."));
+      } finally {
+        setLoading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Relatórios</h1>
-          <p className="text-gray-500">Histórico de produção e financeiro.</p>
+          <h1 className="text-2xl font-bold text-gray-900">Relatório de Produção</h1>
+          <p className="text-gray-500">Visualize e imprima o histórico de riscos e pagamentos.</p>
         </div>
         <div className="flex gap-2">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            accept=".json" 
+            className="hidden" 
+          />
+          <button 
+            onClick={handleRestoreClick}
+            disabled={loading}
+            className="bg-white text-slate-700 border border-slate-200 px-4 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-all disabled:opacity-50"
+          >
+            <Upload size={20} /> Restaurar
+          </button>
           <button 
             onClick={handleBackup}
             disabled={loading}
             className="bg-blue-50 text-blue-700 border border-blue-200 px-4 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-100 transition-all disabled:opacity-50"
+            title="Baixar cópia de segurança dos dados (JSON)"
           >
             <Download size={20} /> Backup
           </button>
           <button 
             onClick={handlePrint}
             disabled={loading || reportRefs.length === 0}
-            className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-900 shadow-lg transition-all disabled:opacity-50"
+            className="bg-slate-800 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-900 shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100"
           >
             <Printer size={20} /> Imprimir
           </button>
@@ -162,29 +229,35 @@ const Relatorios: React.FC = () => {
           </div>
         )}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-400 uppercase">Data Início</label>
+          <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
+            <Calendar size={14} /> Data Início
+          </label>
           <input 
             type="date" 
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
+            className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-blue-500 font-medium text-sm"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-400 uppercase">Data Fim</label>
+          <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
+            <Calendar size={14} /> Data Fim
+          </label>
           <input 
             type="date" 
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
+            className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-blue-500 font-medium text-sm"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold text-gray-400 uppercase">Modelista</label>
+          <label className="text-xs font-bold text-gray-400 uppercase flex items-center gap-2">
+            <Filter size={14} /> Modelista
+          </label>
           <select
             value={selectedModelistaId}
             onChange={(e) => setSelectedModelistaId(e.target.value)}
-            className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none"
+            className="w-full px-4 py-2 rounded-xl border border-gray-200 outline-none focus:border-blue-500 font-medium text-sm appearance-none bg-white"
           >
             <option value="">Todas</option>
             {modelistas.map(m => (
@@ -196,16 +269,67 @@ const Relatorios: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl border shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase">Total Produção</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Produção Total</p>
           <h3 className="text-2xl font-black text-slate-900 mt-1">R$ {totalValorGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+          <p className="text-xs text-gray-500 mt-1">{reportRefs.length} itens encontrados</p>
         </div>
+
         <div className="bg-white p-6 rounded-2xl border shadow-sm">
-          <p className="text-xs font-bold text-emerald-500 uppercase">Total Pago</p>
+          <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest">Total Liquidado</p>
           <h3 className="text-2xl font-black text-emerald-600 mt-1">R$ {totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+          <div className="flex items-center gap-1 text-[10px] text-emerald-500 font-bold mt-1">
+            <CheckCircle2 size={12} /> JÁ PAGOS
+          </div>
         </div>
+
         <div className="bg-white p-6 rounded-2xl border shadow-sm">
-          <p className="text-xs font-bold text-orange-500 uppercase">Total em Aberto</p>
+          <p className="text-xs font-bold text-orange-500 uppercase tracking-widest">Total Pendente</p>
           <h3 className="text-2xl font-black text-orange-600 mt-1">R$ {totalAPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h3>
+          <div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-1">
+            <AlertCircle size={12} /> A PAGAR
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+        <div className="p-4 bg-gray-50 border-b">
+          <h2 className="text-sm font-bold text-gray-600 uppercase tracking-widest">Prévia dos Dados Filtrados</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white border-b">
+                <th className="px-6 py-4">Data</th>
+                <th className="px-6 py-4">Ref.</th>
+                <th className="px-6 py-4">Largura</th>
+                <th className="px-6 py-4">Comprimento</th>
+                <th className="px-6 py-4 text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {reportRefs.map(r => (
+                <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 text-sm text-gray-500">
+                    {formatDateBR(r.dataRecebimento || r.dataPedido)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="font-bold text-gray-800">{r.codigo}</div>
+                    <div className="text-[10px] text-gray-400">{modelistas.find(m => m.id === r.modelistaId)?.nome}</div>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-blue-600">{Number(r.medidaConsiderada || 0).toFixed(2)}m</td>
+                  <td className="px-6 py-4 text-sm font-medium text-slate-600">{Number(r.comprimentoFinal || 0).toFixed(2)}m</td>
+                  <td className="px-6 py-4 text-right font-black text-slate-900">R$ {Number(r.valorTotal || 0).toFixed(2)}</td>
+                </tr>
+              ))}
+              {!loading && reportRefs.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-6 py-12 text-center text-gray-400 italic text-sm">
+                    Nenhum dado encontrado para os filtros selecionados.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
