@@ -302,7 +302,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
         </div>
       </div>
 
-      {/* Modals are unchanged except for removing actionLoading blocking logic if needed */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
@@ -347,7 +346,7 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
                 />
               </div>
               <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl border font-bold">Cancelar</button>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl border font-bold text-gray-600">Cancelar</button>
                 <button type="submit" className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-xl font-bold">Abrir Pedido</button>
               </div>
             </form>
@@ -355,7 +354,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
         </div>
       )}
 
-      {/* Rolo Modal */}
       {isRollModalOpen && selectedRef && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
@@ -387,7 +385,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
         </div>
       )}
 
-      {/* Receive Modal */}
       {isReceiveModalOpen && selectedRef && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">

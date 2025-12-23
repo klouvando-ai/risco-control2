@@ -113,7 +113,6 @@ const Relatorios: React.FC = () => {
         ]],
         footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'right' }
       });
-      doc.autoPrint();
       const blob = doc.output('blob');
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');

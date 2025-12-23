@@ -11,4 +11,6 @@ if (container) {
       <App />
     </React.StrictMode>
   );
+} else {
+  console.error("Não foi possível encontrar o elemento root.");
 }
