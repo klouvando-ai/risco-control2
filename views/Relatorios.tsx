@@ -1,18 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { Modelista, Referencia, RiscoStatus } from '../types';
 import { 
-  BarChart3, 
-  TrendingUp, 
-  Layers, 
   Printer,
   Calendar,
   Filter,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Download,
-  Upload
+  Download
 } from 'lucide-react';
 
 import { jsPDF } from "jspdf";
@@ -22,7 +18,6 @@ const Relatorios: React.FC = () => {
   const [refs, setRefs] = useState<Referencia[]>([]);
   const [modelistas, setModelistas] = useState<Modelista[]>([]);
   const [loading, setLoading] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
@@ -145,43 +140,6 @@ const Relatorios: React.FC = () => {
     }
   };
 
-  const handleRestoreClick = () => {
-    if (confirm("ATENÇÃO: Restaurar um backup irá APAGAR todos os dados atuais e substituí-los pelo arquivo selecionado. Deseja continuar?")) {
-      fileInputRef.current?.click();
-    }
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const content = e.target?.result as string;
-        let jsonData;
-        
-        try {
-          jsonData = JSON.parse(content);
-        } catch (parseErr) {
-          throw new Error("O arquivo selecionado não é um JSON válido.");
-        }
-        
-        setLoading(true);
-        await dataService.restoreBackup(jsonData);
-        alert("Backup restaurado com sucesso! O sistema será atualizado.");
-        await loadData();
-      } catch (err: any) {
-        console.error("Erro na restauração:", err);
-        alert("FALHA NA RESTAURAÇÃO: " + (err.message || "Erro desconhecido. Verifique se o arquivo está correto."));
-      } finally {
-        setLoading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsText(file);
-  };
-
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -190,20 +148,6 @@ const Relatorios: React.FC = () => {
           <p className="text-gray-500">Visualize e imprima o histórico de riscos e pagamentos.</p>
         </div>
         <div className="flex gap-2">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept=".json" 
-            className="hidden" 
-          />
-          <button 
-            onClick={handleRestoreClick}
-            disabled={loading}
-            className="bg-white text-slate-700 border border-slate-200 px-4 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-all disabled:opacity-50"
-          >
-            <Upload size={20} /> Restaurar
-          </button>
           <button 
             onClick={handleBackup}
             disabled={loading}

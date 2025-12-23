@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Referencia, Modelista, RiscoStatus, User, Rolo } from '../types';
 import { dataService } from '../services/dataService';
@@ -93,6 +92,19 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
+  const handleDeleteRef = async (id: string) => {
+    if (!confirm('Deseja realmente excluir esta referência permanentemente?')) return;
+    setActionLoading(true);
+    try {
+      await dataService.deleteReferencia(id);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleAddRoll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRef || !newRollMeasure) return;
@@ -114,7 +126,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
 
       await dataService.saveReferencia(updatedRef);
       
-      // Atualiza localmente para rapidez
       const refsData = await dataService.getReferencias();
       setRefs(refsData);
       const newSelected = refsData.find(r => r.id === selectedRef.id);
@@ -183,7 +194,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
-  // Função para exibir data formatada PT-BR
   const formatDateBR = (dateStr: string) => {
     if (!dateStr) return '---';
     const [year, month, day] = dateStr.split('-');
@@ -213,7 +223,7 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
       )}
 
       <div className="bg-white rounded-2xl border shadow-sm overflow-hidden min-h-[400px] relative">
-        {(loading || (actionLoading && !isRollModalOpen)) && (
+        {(loading || (actionLoading && !isRollModalOpen && !isReceiveModalOpen)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
             <Loader2 className="animate-spin text-blue-600" size={32} />
           </div>
@@ -273,23 +283,33 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      {r.status === RiscoStatus.AGUARDANDO_ROLO || r.status === RiscoStatus.AGUARDANDO_RISCO ? (
-                        <button 
-                          onClick={() => { setSelectedRef(r); setIsRollModalOpen(true); }}
-                          title="Medir Rolos"
-                          className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                        >
-                          <Layers size={14} /> Rolos
-                        </button>
-                      ) : null}
-                      
-                      {r.status === RiscoStatus.AGUARDANDO_RISCO && (
-                        <button 
-                          onClick={() => { setSelectedRef(r); setIsReceiveModalOpen(true); }}
-                          className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md"
-                        >
-                          <ArrowRight size={14} /> Receber
-                        </button>
+                      {(r.status === RiscoStatus.AGUARDANDO_ROLO || r.status === RiscoStatus.AGUARDANDO_RISCO) && (
+                        <>
+                          <button 
+                            onClick={() => { setSelectedRef(r); setIsRollModalOpen(true); }}
+                            title="Medir Rolos"
+                            className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                          >
+                            <Layers size={14} /> Rolos
+                          </button>
+                          
+                          {r.status === RiscoStatus.AGUARDANDO_RISCO && (
+                            <button 
+                              onClick={() => { setSelectedRef(r); setIsReceiveModalOpen(true); }}
+                              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md"
+                            >
+                              <ArrowRight size={14} /> Receber
+                            </button>
+                          )}
+
+                          <button 
+                            onClick={() => handleDeleteRef(r.id)}
+                            title="Excluir Referência"
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </>
                       )}
                       
                       {(r.status === RiscoStatus.RECEBIDO || r.status === RiscoStatus.PAGO) && (
