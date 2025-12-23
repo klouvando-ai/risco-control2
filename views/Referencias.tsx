@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Referencia, Modelista, RiscoStatus, User, Rolo } from '../types';
 import { dataService } from '../services/dataService';
@@ -53,7 +52,7 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
       setRefs(refsData);
       setModelistas(modsData.filter(m => m.ativa));
     } catch (err: any) {
-      setError("Erro ao carregar dados. Verifique a conexão com o banco.");
+      setError("Erro ao carregar dados. Verifique o servidor.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -93,6 +92,20 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
+  const handleDeleteReferencia = async (id: string) => {
+    if (!confirm('Deseja realmente excluir este pedido permanentemente? Esta ação não pode ser desfeita.')) return;
+    
+    setActionLoading(true);
+    try {
+      await dataService.deleteReferencia(id);
+      await loadData();
+    } catch (err: any) {
+      alert("Erro ao excluir: " + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleAddRoll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedRef || !newRollMeasure) return;
@@ -114,7 +127,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
 
       await dataService.saveReferencia(updatedRef);
       
-      // Atualiza localmente para rapidez
       const refsData = await dataService.getReferencias();
       setRefs(refsData);
       const newSelected = refsData.find(r => r.id === selectedRef.id);
@@ -183,7 +195,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
     }
   };
 
-  // Função para exibir data formatada PT-BR
   const formatDateBR = (dateStr: string) => {
     if (!dateStr) return '---';
     const [year, month, day] = dateStr.split('-');
@@ -213,7 +224,7 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
       )}
 
       <div className="bg-white rounded-2xl border shadow-sm overflow-hidden min-h-[400px] relative">
-        {(loading || (actionLoading && !isRollModalOpen)) && (
+        {(loading || (actionLoading && !isRollModalOpen && !isReceiveModalOpen)) && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/50 z-10">
             <Loader2 className="animate-spin text-blue-600" size={32} />
           </div>
@@ -238,8 +249,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
               <tr className="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-widest border-b">
                 <th className="px-6 py-4">Data</th>
                 <th className="px-6 py-4">Ref. / Descrição</th>
-                <th className="px-6 py-4">Modelista</th>
-                <th className="px-6 py-4">Medida Max.</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Ações</th>
               </tr>
@@ -254,18 +263,6 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
                     <div className="font-bold text-gray-900">{r.codigo}</div>
                     <div className="text-xs text-gray-500">{r.descricao}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {modelistas.find(m => m.id === r.modelistaId)?.nome || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4">
-                    {Number(r.medidaConsiderada) > 0 ? (
-                      <span className="font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">
-                        {Number(r.medidaConsiderada).toFixed(2)}m
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 text-xs italic">Aguard. rolos</span>
-                    )}
-                  </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusBadge(r.status)}`}>
                       {r.status}
@@ -273,23 +270,33 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      {r.status === RiscoStatus.AGUARDANDO_ROLO || r.status === RiscoStatus.AGUARDANDO_RISCO ? (
-                        <button 
-                          onClick={() => { setSelectedRef(r); setIsRollModalOpen(true); }}
-                          title="Medir Rolos"
-                          className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
-                        >
-                          <Layers size={14} /> Rolos
-                        </button>
-                      ) : null}
-                      
-                      {r.status === RiscoStatus.AGUARDANDO_RISCO && (
-                        <button 
-                          onClick={() => { setSelectedRef(r); setIsReceiveModalOpen(true); }}
-                          className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md"
-                        >
-                          <ArrowRight size={14} /> Receber
-                        </button>
+                      {(r.status === RiscoStatus.AGUARDANDO_ROLO || r.status === RiscoStatus.AGUARDANDO_RISCO) && (
+                        <>
+                          <button 
+                            onClick={() => { setSelectedRef(r); setIsRollModalOpen(true); }}
+                            title="Medir Rolos"
+                            className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-xs font-bold transition-all"
+                          >
+                            <Layers size={14} /> Rolos
+                          </button>
+                          
+                          {r.status === RiscoStatus.AGUARDANDO_RISCO && (
+                            <button 
+                              onClick={() => { setSelectedRef(r); setIsReceiveModalOpen(true); }}
+                              className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md"
+                            >
+                              <ArrowRight size={14} /> Receber
+                            </button>
+                          )}
+
+                          <button 
+                            onClick={() => handleDeleteReferencia(r.id)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Excluir Risco"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </>
                       )}
                       
                       {(r.status === RiscoStatus.RECEBIDO || r.status === RiscoStatus.PAGO) && (
@@ -303,7 +310,7 @@ const Referencias: React.FC<{ user: User }> = ({ user }) => {
               ))}
               {!loading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
                     Nenhuma referência encontrada.
                   </td>
                 </tr>

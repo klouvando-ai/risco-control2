@@ -9,11 +9,9 @@ const PORT = process.env.PORT || 3004;
 const DB_PATH = process.env.DB_CUSTOM_PATH || path.join(__dirname, 'db.json');
 
 app.use(cors());
-// Aumentado o limite para 100mb para garantir que backups grandes não falhem
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Inicialização do Banco de Dados
 const initDB = () => {
   const dbDir = path.dirname(DB_PATH);
   if (!fs.existsSync(dbDir)) {
@@ -55,9 +53,7 @@ const getTodayLocal = () => {
   return localDate.toISOString().split('T')[0];
 };
 
-// API Endpoints
 app.get('/api/modelistas', (req, res) => res.json(readDB().modelistas));
-
 app.post('/api/modelistas', (req, res) => {
   const db = readDB();
   const modelista = req.body;
@@ -67,7 +63,6 @@ app.post('/api/modelistas', (req, res) => {
   if (writeDB(db)) res.json({ success: true });
   else res.status(500).json({ error: "Erro ao salvar no arquivo" });
 });
-
 app.delete('/api/modelistas/:id', (req, res) => {
   const db = readDB();
   db.modelistas = db.modelistas.filter(m => m.id !== req.params.id);
@@ -79,7 +74,6 @@ app.get('/api/referencias', (req, res) => {
   const db = readDB();
   res.json([...db.referencias].sort((a, b) => b.dataPedido.localeCompare(a.dataPedido)));
 });
-
 app.post('/api/referencias', (req, res) => {
   const db = readDB();
   const ref = req.body;
@@ -89,6 +83,12 @@ app.post('/api/referencias', (req, res) => {
   else db.referencias.push(ref);
   if (writeDB(db)) res.json({ success: true });
   else res.status(500).json({ error: "Erro ao salvar referência" });
+});
+app.delete('/api/referencias/:id', (req, res) => {
+  const db = readDB();
+  db.referencias = db.referencias.filter(r => r.id !== req.params.id);
+  if (writeDB(db)) res.json({ success: true });
+  else res.status(500).json({ error: "Erro ao deletar referência" });
 });
 
 app.post('/api/referencias/:id/receber', (req, res) => {
@@ -120,48 +120,12 @@ app.post('/api/referencias/:id/pagar', (req, res) => {
   } else res.status(404).json({ error: "Não encontrado" });
 });
 
-// Endpoint de Restauração Robusto
-app.post('/api/restore', (req, res) => {
-  try {
-    const backupData = req.body;
-    
-    // Validação básica da estrutura do backup
-    if (!backupData || !Array.isArray(backupData.modelistas) || !Array.isArray(backupData.referencias)) {
-      console.error("Backup inválido recebido:", Object.keys(backupData || {}));
-      return res.status(400).json({ 
-        error: "O arquivo selecionado não é um backup válido do sistema Kavin's." 
-      });
-    }
-
-    const success = writeDB({
-      modelistas: backupData.modelistas,
-      referencias: backupData.referencias
-    });
-
-    if (success) {
-      console.log("Backup restaurado com sucesso!");
-      res.json({ success: true });
-    } else {
-      res.status(500).json({ error: "Falha física ao gravar o arquivo de backup no disco." });
-    }
-  } catch (err) {
-    console.error("Erro crítico na restauração:", err);
-    res.status(500).json({ error: "Erro interno ao processar o arquivo." });
-  }
-});
-
-// Arquivos Estáticos (Frontend)
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
-
-// Fallback SPA
 app.get('*', (req, res) => {
   const indexFile = path.join(distPath, 'index.html');
-  if (fs.existsSync(indexFile)) {
-    res.sendFile(indexFile);
-  } else {
-    res.status(404).send('Pasta "dist" não encontrada. Rode "npm run build".');
-  }
+  if (fs.existsSync(indexFile)) res.sendFile(indexFile);
+  else res.status(404).send('Ambiente de produção não configurado corretamente.');
 });
 
 app.listen(PORT, '127.0.0.1', () => {

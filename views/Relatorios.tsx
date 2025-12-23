@@ -1,18 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { dataService } from '../services/dataService';
 import { Modelista, Referencia, RiscoStatus } from '../types';
 import { 
-  BarChart3, 
-  TrendingUp, 
-  Layers, 
   Printer,
   Calendar,
   Filter,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Download,
-  Upload
+  Download
 } from 'lucide-react';
 
 import { jsPDF } from "jspdf";
@@ -22,7 +18,6 @@ const Relatorios: React.FC = () => {
   const [refs, setRefs] = useState<Referencia[]>([]);
   const [modelistas, setModelistas] = useState<Modelista[]>([]);
   const [loading, setLoading] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [startDate, setStartDate] = useState(new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date().toISOString().slice(0, 10));
@@ -52,6 +47,11 @@ const Relatorios: React.FC = () => {
     return `${day}/${month}/${year}`;
   };
 
+  const getMinRollWidth = (ref: Referencia) => {
+    if (!ref.rolos || ref.rolos.length === 0) return 0;
+    return Math.min(...ref.rolos.map(r => Number(r.medida) || 0));
+  };
+
   const reportRefs = refs.filter(r => {
     if (r.status !== RiscoStatus.RECEBIDO && r.status !== RiscoStatus.PAGO) return false;
     const dateComp = (r.dataRecebimento || r.dataPedido || '').split('T')[0];
@@ -76,64 +76,63 @@ const Relatorios: React.FC = () => {
       }
       const doc = new jsPDF('landscape');
       const modelistaName = selectedModelistaId ? modelistas.find(m => m.id === selectedModelistaId)?.nome : 'Geral';
+      
+      // Cabeçalho estilizado
       doc.setFillColor(30, 41, 59);
       doc.rect(0, 0, 297, 35, 'F');
+      
       doc.setFontSize(24);
       doc.setTextColor(255, 255, 255);
       doc.text("Kavin's Industry", 14, 18);
+      
       doc.setFontSize(10);
       doc.setTextColor(200, 200, 200);
       doc.text("RELATÓRIO DE PRODUÇÃO E FINANCEIRO", 14, 26);
+      
       doc.setFontSize(9);
       doc.setTextColor(255, 255, 255);
       doc.text(`Período: ${formatDateBR(startDate)} a ${formatDateBR(endDate)}`, 210, 15);
       doc.text(`Modelista: ${modelistaName}`, 210, 20);
       doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')}`, 210, 25);
+
       const tableData = reportRefs.map(r => [
         formatDateBR(r.dataPedido),
         r.codigo,
         modelistas.find(m => m.id === r.modelistaId)?.nome || 'N/A',
         `${Number(r.medidaConsiderada || 0).toFixed(2)}m`,
+        `${getMinRollWidth(r).toFixed(2)}m`, // Nova Coluna
         `${Number(r.comprimentoFinal || 0).toFixed(2)}m`,
-        formatDateBR(r.dataRecebimento),
+        formatDateBR(r.dataRecebimento || ''),
         `R$ ${Number(r.valorTotal || 0).toFixed(2)}`,
         r.status === RiscoStatus.PAGO ? 'PAGO' : 'ABERTO'
       ]);
+
       autoTable(doc, {
         startY: 40,
-        head: [['Dt. Pedido', 'Ref.', 'Modelista', 'Larg. Rolo', 'Comp. Risco', 'Dt. Receb.', 'Valor Total', 'Status']],
+        head: [['Dt. Pedido', 'Ref.', 'Modelista', 'Larg. Maior', 'Larg. Menor', 'Comp. Risco', 'Dt. Receb.', 'Valor Total', 'Status']],
         body: tableData,
         theme: 'grid',
-        headStyles: { fillColor: [51, 65, 85], fontSize: 9, fontStyle: 'bold' },
-        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [51, 65, 85], fontSize: 8, fontStyle: 'bold' },
+        styles: { fontSize: 7, cellPadding: 2 },
         columnStyles: {
-          6: { fontStyle: 'bold', halign: 'right' },
-          7: { halign: 'center' }
+          7: { fontStyle: 'bold', halign: 'right' },
+          8: { halign: 'center' }
         },
         foot: [[
-          '', '', '', '', '',
+          '', '', '', '', '', '', 
           'TOTAL DO PERÍODO:', 
           `R$ ${totalValorGeral.toFixed(2)}`,
           ''
         ]],
         footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'right' }
       });
-      const finalY = (doc as any).lastAutoTable.finalY || 100;
-      doc.setFontSize(11);
-      doc.setTextColor(30, 41, 59);
-      doc.text("Resumo Financeiro", 14, finalY + 15);
-      doc.setFontSize(9);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Total Pago: R$ ${totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14, finalY + 22);
-      doc.text(`Total A Pagar: R$ ${totalAPagar.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 14, finalY + 27);
-      doc.text(`Metragem Total: ${reportRefs.reduce((a,c) => a + (Number(c.comprimentoFinal) || 0), 0).toFixed(2)}m`, 14, finalY + 32);
-      doc.autoPrint();
+
       const blob = doc.output('blob');
       const url = URL.createObjectURL(blob);
       window.open(url, '_blank');
     } catch (err) {
       console.error("Erro ao gerar PDF:", err);
-      alert("Ocorreu um erro ao gerar a prévia de impressão.");
+      alert("Erro ao gerar impressão.");
     }
   };
 
@@ -145,43 +144,6 @@ const Relatorios: React.FC = () => {
     }
   };
 
-  const handleRestoreClick = () => {
-    if (confirm("ATENÇÃO: Restaurar um backup irá APAGAR todos os dados atuais e substituí-los pelo arquivo selecionado. Deseja continuar?")) {
-      fileInputRef.current?.click();
-    }
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const content = e.target?.result as string;
-        let jsonData;
-        
-        try {
-          jsonData = JSON.parse(content);
-        } catch (parseErr) {
-          throw new Error("O arquivo selecionado não é um JSON válido.");
-        }
-        
-        setLoading(true);
-        await dataService.restoreBackup(jsonData);
-        alert("Backup restaurado com sucesso! O sistema será atualizado.");
-        await loadData();
-      } catch (err: any) {
-        console.error("Erro na restauração:", err);
-        alert("FALHA NA RESTAURAÇÃO: " + (err.message || "Erro desconhecido. Verifique se o arquivo está correto."));
-      } finally {
-        setLoading(false);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      }
-    };
-    reader.readAsText(file);
-  };
-
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -190,20 +152,6 @@ const Relatorios: React.FC = () => {
           <p className="text-gray-500">Visualize e imprima o histórico de riscos e pagamentos.</p>
         </div>
         <div className="flex gap-2">
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept=".json" 
-            className="hidden" 
-          />
-          <button 
-            onClick={handleRestoreClick}
-            disabled={loading}
-            className="bg-white text-slate-700 border border-slate-200 px-4 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-50 transition-all disabled:opacity-50"
-          >
-            <Upload size={20} /> Restaurar
-          </button>
           <button 
             onClick={handleBackup}
             disabled={loading}
@@ -301,7 +249,7 @@ const Relatorios: React.FC = () => {
               <tr className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-white border-b">
                 <th className="px-6 py-4">Data</th>
                 <th className="px-6 py-4">Ref.</th>
-                <th className="px-6 py-4">Largura</th>
+                <th className="px-6 py-4">Larguras (Maior/Menor)</th>
                 <th className="px-6 py-4">Comprimento</th>
                 <th className="px-6 py-4 text-right">Valor</th>
               </tr>
@@ -316,7 +264,11 @@ const Relatorios: React.FC = () => {
                     <div className="font-bold text-gray-800">{r.codigo}</div>
                     <div className="text-[10px] text-gray-400">{modelistas.find(m => m.id === r.modelistaId)?.nome}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium text-blue-600">{Number(r.medidaConsiderada || 0).toFixed(2)}m</td>
+                  <td className="px-6 py-4 text-sm font-medium">
+                    <span className="text-blue-600">{Number(r.medidaConsiderada || 0).toFixed(2)}m</span>
+                    <span className="text-gray-300 mx-2">/</span>
+                    <span className="text-orange-600">{getMinRollWidth(r).toFixed(2)}m</span>
+                  </td>
                   <td className="px-6 py-4 text-sm font-medium text-slate-600">{Number(r.comprimentoFinal || 0).toFixed(2)}m</td>
                   <td className="px-6 py-4 text-right font-black text-slate-900">R$ {Number(r.valorTotal || 0).toFixed(2)}</td>
                 </tr>
