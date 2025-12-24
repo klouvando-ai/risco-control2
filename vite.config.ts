@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // Garante caminhos relativos (./assets/...) fundamentais para o Electron
+  base: './', 
   build: {
     outDir: 'dist',
     emptyOutDir: true,
@@ -12,16 +12,8 @@ export default defineConfig({
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: true, // Remove logs de console no build final
         drop_debugger: true
-      }
-    },
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          utils: ['recharts', 'jspdf', 'jspdf-autotable', 'lucide-react']
-        }
       }
     }
   },
