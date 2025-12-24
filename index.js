@@ -6,11 +6,9 @@ const fs = require('fs');
 let mainWindow;
 let serverProcess;
 
-// Localização fixa para facilitar que o usuário cole o backup
 const dataFolder = 'C:\\KavinsRiscoControl';
 const dbPath = path.join(dataFolder, 'db.json');
 
-// Inicialização da pasta e arquivo se não existirem
 function ensureDataDir() {
   if (!fs.existsSync(dataFolder)) {
     try {
@@ -26,7 +24,6 @@ function createWindow() {
     width: 1280,
     height: 800,
     title: "Kavin's Risco Control",
-    // Usa o favicon como ícone da janela
     icon: path.join(__dirname, 'dist', 'favicon.ico'),
     webPreferences: {
       nodeIntegration: false,
@@ -35,22 +32,24 @@ function createWindow() {
     autoHideMenuBar: true
   });
 
+  // Usamos 127.0.0.1 para evitar resoluções de DNS desnecessárias offline
   const url = 'http://127.0.0.1:3004';
   
-  // Lógica robusta de carregamento: tenta até 10 vezes antes de desistir
   let attempts = 0;
   const loadWithRetry = () => {
     attempts++;
     mainWindow.loadURL(url).catch((err) => {
-      console.log(`Tentativa ${attempts}: Servidor ainda não disponível...`);
-      if (attempts < 10) {
-        setTimeout(loadWithRetry, 1500);
+      console.log(`Tentativa ${attempts}: Aguardando servidor local...`);
+      if (attempts < 15) {
+        setTimeout(loadWithRetry, 1000);
       } else {
         mainWindow.loadHTML(`
-          <body style="font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#f8fafc; color:#1e293b;">
-            <h1 style="color:#2563eb">Ops! Ocorreu um erro.</h1>
-            <p>O servidor interno não iniciou corretamente.</p>
-            <button onclick="location.reload()" style="padding:10px 20px; background:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer;">Tentar Novamente</button>
+          <body style="font-family:sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; background:#f1f5f9; color:#334155; margin:0;">
+            <div style="background:white; padding:40px; border-radius:16px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); text-align:center;">
+              <h1 style="color:#2563eb; margin-bottom:10px;">Erro de Conexão Local</h1>
+              <p>O serviço de banco de dados não pôde ser iniciado.</p>
+              <button onclick="location.reload()" style="margin-top:20px; padding:12px 24px; background:#2563eb; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:bold;">Tentar Abrir Novamente</button>
+            </div>
           </body>
         `);
       }
@@ -59,7 +58,7 @@ function createWindow() {
 
   loadWithRetry();
 
-  mainWindow.on('closed', function () {
+  mainWindow.on('closed', () => {
     mainWindow = null;
   });
 }
@@ -72,30 +71,25 @@ function startServer() {
     env: { 
       ...process.env, 
       PORT: 3004,
-      DB_CUSTOM_PATH: dbPath, // O servidor usará o arquivo no C:\KavinsRiscoControl
+      DB_CUSTOM_PATH: dbPath,
       NODE_ENV: 'production'
     }
   });
 
   serverProcess.on('error', (err) => {
-    console.error('Falha ao iniciar processo do servidor:', err);
+    console.error('Falha no servidor:', err);
   });
 }
 
 app.on('ready', () => {
   ensureDataDir();
   startServer();
-  // Delay inicial para dar tempo ao Node de alocar a porta
   setTimeout(createWindow, 1000);
 });
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     if (serverProcess) serverProcess.kill();
     app.quit();
   }
-});
-
-app.on('activate', function () {
-  if (mainWindow === null) createWindow();
 });
