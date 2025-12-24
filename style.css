@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Fontes do sistema para garantir funcionamento offline total */
 :root {
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -11,15 +15,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Fallback para o Tailwind sem CDN durante o carregamento */
 #root:empty::before {
-  content: "Iniciando Sistema Kavin's...";
+  content: "Carregando Kavin's Risco Control...";
   position: fixed;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   color: #64748b;
   font-weight: 600;
+  font-family: sans-serif;
 }
 
 /* Custom Scrollbar */
@@ -38,7 +42,6 @@ body {
   background: #94a3b8;
 }
 
-/* Prevenir seleção de texto indesejada em áreas de interface */
 .no-select {
   user-select: none;
 }

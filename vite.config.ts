@@ -3,15 +3,21 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // Garante que caminhos sejam relativos para o Electron
+  base: './', // Importante para o Electron carregar arquivos relativos
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    target: 'esnext',
     assetsDir: 'assets',
+    // Garante que o build seja compatível com navegadores embutidos no Electron
+    target: 'chrome120', 
+    minify: 'terser',
     rollupOptions: {
-      // Garante que o build não tente buscar nada externo
-      external: []
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          utils: ['recharts', 'jspdf', 'jspdf-autotable', 'lucide-react']
+        }
+      }
     }
   },
   server: {
