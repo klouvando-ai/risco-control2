@@ -1,5 +1,21 @@
 body {
   font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  margin: 0;
+}
+
+/* Estado de carregamento inicial para evitar tela branca */
+#root:empty::before {
+  content: "Iniciando Kavin's Risco Control...";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Inter', sans-serif;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 1.1rem;
+  letter-spacing: -0.025em;
 }
 
 /* Scrollbar personalizada para desktop */
@@ -19,4 +35,11 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+/* Transições suaves */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
 }
