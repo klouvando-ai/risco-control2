@@ -3,14 +3,19 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', // Importante para o Electron carregar arquivos relativos
+  base: './', 
   build: {
     outDir: 'dist',
     emptyOutDir: true,
     assetsDir: 'assets',
-    // Garante que o build seja compatível com navegadores embutidos no Electron
     target: 'chrome120', 
     minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {
