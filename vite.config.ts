@@ -3,13 +3,13 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: './', 
+  base: './', // Garante que caminhos como /assets virem ./assets para o Electron
   build: {
     outDir: 'dist',
     emptyOutDir: true,
     assetsDir: 'assets',
     target: 'chrome120', 
-    minify: 'terser',
+    minify: 'terser', // Utiliza o terser para compressão offline
     terserOptions: {
       compress: {
         drop_console: true,
