@@ -1,7 +1,7 @@
 {
   "name": "kavins-risco-control-desktop",
-  "version": "1.0.2",
-  "description": "Sistema de Controle de Risco Kavin's",
+  "version": "1.0.4",
+  "description": "Sistema de Controle de Risco Kavin's Nativo - 100% Offline",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
@@ -24,9 +24,6 @@
     "vite": "^5.1.4"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "express": "^4.19.2",
     "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -44,15 +41,14 @@
     "files": [
       "dist/**/*",
       "index.js",
-      "server.js",
+      "preload.js",
       "package.json",
       "node_modules/**/*"
     ],
     "win": {
       "target": [
         "nsis"
-      ],
-      "icon": "icon.ico"
+      ]
     },
     "nsis": {
       "oneClick": false,

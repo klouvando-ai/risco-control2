@@ -1,6 +1,18 @@
 import { Modelista, Referencia, RiscoStatus, ReportData } from '../types';
 
-const API_BASE = '/api';
+// Declaração para o TypeScript reconhecer a ponte do Electron
+declare global {
+  interface Window {
+    electronAPI: {
+      getModelistas: () => Promise<Modelista[]>;
+      saveModelista: (m: Modelista) => Promise<boolean>;
+      deleteModelista: (id: string) => Promise<boolean>;
+      getReferencias: () => Promise<Referencia[]>;
+      saveReferencia: (r: Referencia) => Promise<boolean>;
+      deleteReferencia: (id: string) => Promise<boolean>;
+    }
+  }
+}
 
 const getTodayLocal = () => {
   const date = new Date();
@@ -17,50 +29,25 @@ const cleanDate = (d: any) => {
 
 export const dataService = {
   getModelistas: async (): Promise<Modelista[]> => {
-    try {
-      const response = await fetch(`${API_BASE}/modelistas`);
-      if (!response.ok) throw new Error(`Erro ${response.status}`);
-      return response.json();
-    } catch (err: any) {
-      console.error("Erro ao buscar modelistas:", err);
-      throw err;
-    }
+    return await window.electronAPI.getModelistas();
   },
   
   saveModelista: async (modelista: Modelista) => {
-    const response = await fetch(`${API_BASE}/modelistas`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(modelista)
-    });
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-      throw new Error(data.error || 'Erro ao salvar modelista');
-    }
-    return response.json();
+    return await window.electronAPI.saveModelista(modelista);
   },
   
   deleteModelista: async (id: string) => {
-    const response = await fetch(`${API_BASE}/modelistas/${id}`, { method: 'DELETE' });
-    if (!response.ok) throw new Error('Erro ao deletar no servidor');
-    return response.json();
+    return await window.electronAPI.deleteModelista(id);
   },
 
   getReferencias: async (): Promise<Referencia[]> => {
-    try {
-      const response = await fetch(`${API_BASE}/referencias`);
-      if (!response.ok) throw new Error('Falha ao buscar referências');
-      const data = await response.json();
-      return data.map((r: any) => ({
-        ...r,
-        dataPedido: cleanDate(r.dataPedido),
-        dataRecebimento: cleanDate(r.dataRecebimento),
-        dataPagamento: cleanDate(r.dataPagamento)
-      }));
-    } catch (err: any) {
-      console.error("Erro ao buscar referências:", err);
-      throw err;
-    }
+    const data = await window.electronAPI.getReferencias();
+    return data.map((r: any) => ({
+      ...r,
+      dataPedido: cleanDate(r.dataPedido),
+      dataRecebimento: cleanDate(r.dataRecebimento),
+      dataPagamento: cleanDate(r.dataPagamento)
+    }));
   },
   
   saveReferencia: async (ref: Referencia) => {
@@ -94,35 +81,23 @@ export const dataService = {
       status: finalStatus
     };
 
-    const response = await fetch(`${API_BASE}/referencias`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Erro ao salvar referência' }));
-      throw new Error(error.error || 'Erro ao salvar referência');
-    }
-    return response.json();
+    return await window.electronAPI.saveReferencia(payload);
   },
 
   deleteReferencia: async (id: string) => {
-    const response = await fetch(`${API_BASE}/referencias/${id}`, { method: 'DELETE' });
-    if (!response.ok) throw new Error('Erro ao deletar referência');
-    return response.json();
+    return await window.electronAPI.deleteReferencia(id);
   },
 
   markAsPaid: async (refId: string) => {
-    const response = await fetch(`${API_BASE}/referencias/${refId}/pagar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        dataPagamento: getTodayLocal()
-      })
+    const refs = await dataService.getReferencias();
+    const ref = refs.find(r => r.id === refId);
+    if (!ref) throw new Error('Referência não encontrada');
+    
+    return await window.electronAPI.saveReferencia({
+      ...ref,
+      status: RiscoStatus.PAGO,
+      dataPagamento: getTodayLocal()
     });
-    if (!response.ok) throw new Error('Erro ao processar pagamento');
-    return response.json();
   },
 
   receiveRisco: async (refId: string, comprimento: number | string, obs: string) => {
@@ -137,19 +112,14 @@ export const dataService = {
     const modelista = modelistas.find(m => m.id === ref.modelistaId);
     const valorTotal = modelista ? compNum * modelista.valorPorMetro : 0;
 
-    const response = await fetch(`${API_BASE}/referencias/${refId}/receber`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        comprimentoFinal: compNum,
-        dataRecebimento: getTodayLocal(),
-        valorTotal: valorTotal,
-        observacoes: (ref.observacoes ? ref.observacoes + '\n' : '') + obs
-      })
+    return await window.electronAPI.saveReferencia({
+      ...ref,
+      comprimentoFinal: compNum,
+      dataRecebimento: getTodayLocal(),
+      valorTotal: valorTotal,
+      observacoes: (ref.observacoes ? ref.observacoes + '\n' : '') + obs,
+      status: RiscoStatus.RECEBIDO
     });
-
-    if (!response.ok) throw new Error('Erro ao registrar recebimento');
-    return response.json();
   },
 
   getReportData: async (month?: string): Promise<ReportData> => {
